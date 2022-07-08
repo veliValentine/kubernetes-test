@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: todo-app-dep
+  namespace: project-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-app
+  template:
+    metadata:
+      labels:
+        app: todo-app
+    spec:
+      volumes:
+        - name: images-volume
+          emptyDir: {}
+      containers:
+        - name: todo-app
+          image: todo-app-image
+
+          resources:
+            limits:
+              cpu: "10m"
+              memory: "100Mi"
+
+          volumeMounts:
+            - name: images-volume
+              mountPath: /usr/src/app/images
+
+          readinessProbe:
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            httpGet:
+              path: /todos
+              port: 3000
+
+
+          livenessProbe:
+            initialDelaySeconds: 20
+            periodSeconds: 5
+            httpGet:
+              path: /todos
+              port: 3000
+
+          env:
+            - name: IMAGE_FOLDER_PATH
+              value: /usr/src/app/images
+            - name: POSTGRES_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: POSTGRES_USERNAME
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: todo-secrets
+                  key: POSTGRES_PASSWORD
+            - name: DB_POSTGRES_URL
+              value: postgres://$(POSTGRES_USERNAME):$(POSTGRES_PASSWORD)@todo-postgres-service:5432
+            - name: NATS_URL
+              value: nats://my-nats:4222
